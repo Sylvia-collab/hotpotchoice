@@ -38,10 +38,6 @@ const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_PUBLIC_KEY";
 
 async function saveSubmission(winner, totals){
   const status = document.getElementById("saveStatus");
-  if (!SUPABASE_URL.startsWith("https://") || SUPABASE_ANON_KEY.startsWith("YOUR_")) {
-    status.textContent = "问卷结果已生成，但尚未连接数据库；配置 Supabase 后才能保存。";
-    return;
-  }
   const payload = {
     answers: questions.map((q, i) => ({question: q.title, answer: q.opts[answers[i]]})),
     recommendation: winner.name,
@@ -59,7 +55,7 @@ async function saveSubmission(winner, totals){
       body: JSON.stringify(payload)
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    status.textContent = "答案已成功保存，感谢填写！";
+    status.textContent = "问卷已收到！希望你能吃上你想吃的火锅！";
   } catch (error) {
     status.textContent = "结果已生成，但保存失败。请稍后重试或联系问卷发布者。";
     console.error("保存问卷失败：", error);
