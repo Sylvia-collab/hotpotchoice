@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>今天吃哪家火锅？</title>
+<style>
+:root{--red:#b94732;--ink:#302b28;--muted:#82766f;--cream:#fffaf3;--line:#eadfd4;--green:#637b55}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 12% 8%,#f6e5d5,transparent 32%),#f8f3ec;color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+.wrap{max-width:760px;margin:0 auto;padding:28px 18px 60px}.brand{font-size:12px;letter-spacing:.16em;color:var(--red);font-weight:800;text-transform:uppercase}
+header{margin:22px 0 24px}h1{font-size:clamp(30px,6vw,46px);line-height:1.12;margin:8px 0 12px;letter-spacing:-.04em}header p{color:var(--muted);margin:0;line-height:1.7}
+.panel{background:rgba(255,255,255,.84);border:1px solid var(--line);border-radius:24px;padding:clamp(20px,5vw,34px);box-shadow:0 14px 40px #5d3a2010}
+.topline{display:flex;align-items:center;justify-content:space-between;color:var(--muted);font-size:13px}.progress{height:7px;background:#f0e8df;border-radius:10px;margin:12px 0 26px;overflow:hidden}.bar{height:100%;background:var(--red);width:0;transition:width .25s}
+h2{font-size:24px;line-height:1.35;margin:0 0 8px}.hint{color:var(--muted);font-size:13px;line-height:1.6;margin:0 0 22px}
+.options{display:grid;gap:10px}.option{display:flex;gap:12px;align-items:center;border:1px solid var(--line);border-radius:15px;padding:15px 16px;cursor:pointer;background:#fff;transition:.15s}.option:hover{border-color:#c98d7e;transform:translateY(-1px)}.option.selected{border:1.5px solid var(--red);background:#fff5f1;box-shadow:0 0 0 2px #b9473210}.dot{width:18px;height:18px;border:1.5px solid #cbbdb2;border-radius:50%;flex:none;display:grid;place-items:center}.selected .dot{border-color:var(--red)}.selected .dot:after{content:"";width:9px;height:9px;border-radius:50%;background:var(--red)}.opttext{font-size:15px;line-height:1.4}.actions{display:flex;justify-content:space-between;gap:10px;margin-top:26px}.btn{border:0;border-radius:999px;padding:13px 22px;font-weight:700;font-size:14px;cursor:pointer}.primary{background:var(--red);color:white}.primary:disabled{opacity:.35;cursor:not-allowed}.secondary{background:#f2ebe3;color:var(--ink)}.tiny{font-size:12px;color:var(--muted);margin-top:18px;line-height:1.6}
+.results{display:none}.result-head{text-align:center;margin-bottom:24px}.result-head .eyebrow{color:var(--green);font-size:12px;font-weight:800;letter-spacing:.12em}.result-head h2{font-size:30px;margin:8px 0}.winner{border:1px solid #e7c6b9;background:#fff7f1;border-radius:20px;padding:22px;margin:18px 0}.winner .name{font-size:27px;font-weight:850}.score{font-size:36px;color:var(--red);font-weight:850}.score small{font-size:13px;color:var(--muted);font-weight:500}.ranking{display:grid;gap:12px;margin-top:18px}.rank{display:grid;grid-template-columns:32px 1fr auto;gap:10px;align-items:center}.ranknum{color:var(--muted);font-weight:800}.rankname{font-weight:700}.track{height:7px;background:#f0e8df;border-radius:9px;margin-top:7px;overflow:hidden}.fill{height:100%;background:var(--green);border-radius:9px}.rankscore{font-variant-numeric:tabular-nums;font-weight:750}.explain{color:var(--muted);font-size:13px;line-height:1.65;margin-top:18px}.footer{font-size:11px;color:var(--muted);text-align:center;margin-top:20px}
+@media(max-width:480px){.wrap{padding:22px 13px 40px}.panel{border-radius:20px}.option{padding:14px}.actions .btn{padding:12px 17px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="brand">HOT POT MATCH · 火锅灵魂测试</div>
+<header><h1>今天吃哪家火锅？<br>让你的胃来决定。</h1><p>回答 8 道小问题，看看山缓缓、芸山季、凑凑、海底捞和左庭右院，哪家更符合你今天的心情。</p></header>
+<main class="panel" id="quiz">
+<div class="topline"><span id="stepLabel">问题 1 / 8</span><span id="pct">12%</span></div><div class="progress"><div class="bar" id="bar"></div></div>
+<div id="question"></div>
+<div class="actions"><button class="btn secondary" id="back">上一步</button><button class="btn primary" id="next" disabled>下一题 →</button></div>
+<p class="tiny">匹配结果是根据你设定的偏好和示例评分计算的，仅供选店参考。预算与优惠会影响预算匹配，不会单独出现优惠题。</p>
+</main>
+<section class="panel results" id="results"></section>
+<div class="footer">一份轻松的火锅选择小工具 · 离线可用</div>
+</div>
+<script>
+const shops=["山缓缓","芸山季","凑凑","海底捞","左庭右院"];
+const questions=[
+{title:"这顿火锅，你希望人均花多少钱？",hint:"预算会按价格区间匹配；海底捞按符合条件时的 88 元学生优惠估算。",opts:["50 元以内，能省则省","50～88 元，学生党预算","88～120 元，适当放宽","120～150 元，吃得开心最重要","150 元以上，预算不是问题"],weight:25,
+scores:[[2,1,2,4,2],[3,2,3,5,3],[4,3,4,5,4],[4,4,4,4,4],[5,5,5,4,5]]},
+{title:"今天最想吃哪种口味？",hint:"选最能代表你今天心情的一项。",opts:["麻辣鲜香，越辣越过瘾","菌汤鲜香，喝汤也满足","番茄、牛骨汤等清淡口味","酸汤或特色汤底，想尝鲜","鸳鸯锅，辣的和不辣的都要","没有特别偏好"],weight:18,
+scores:[[2,1,4,5,2],[4,5,2,3,3],[3,3,4,4,5],[4,5,3,3,3],[3,3,5,5,4],[3,3,3,3,3]]},
+{title:"如果只能选一种，你最想吃什么？",hint:"想想今天最馋的那一口。",opts:["鲜切牛肉，各种部位都想尝","高品质肥牛、雪花牛肉","野生菌、山野蔬菜等特色食材","毛肚、鸭肠、黄喉等经典菜","虾滑、丸子、丰富配菜","什么都想吃，菜品丰富最重要"],weight:18,
+scores:[[4,3,3,4,5],[4,3,4,4,5],[5,5,2,2,2],[2,2,4,5,3],[3,3,5,5,3],[3,3,5,5,4]]},
+{title:"你希望这顿火锅是什么氛围？",hint:"环境偏好会影响匹配，但不会压过预算和口味。",opts:["环境漂亮，适合拍照打卡","安静舒适，适合聊天","热闹有趣，服务和互动很重要","有特色的装修和氛围","无所谓，味道和价格更重要"],weight:10,
+scores:[[5,5,4,3,4],[4,4,3,2,4],[2,2,4,5,3],[5,5,4,3,4],[3,3,3,3,3]]},
+{title:"你怎么看待火锅的性价比？",hint:"选择你最认同的一种消费观。",opts:["价格越低越好，吃饱就行","便宜而且好吃，性价比最重要","稍贵没关系，但食材要有特色","愿意为环境、服务和体验买单","只要吃得满足，价格可以灵活"],weight:10,
+scores:[[3,2,3,5,3],[3,3,4,5,4],[5,5,3,3,5],[4,4,4,5,3],[4,4,4,4,4]]},
+{title:"你对服务有什么期待？",hint:"从完全自助到细致周到，选你舒服的方式。",opts:["服务周到，最好不用自己操心","有基本服务就行，不要过度打扰","喜欢有特色的服务和互动","无所谓，主要看食物"],weight:8,
+scores:[[3,3,4,5,4],[4,4,4,3,4],[3,3,4,5,3],[3,3,3,3,3]]},
+{title:"这次准备和谁一起吃火锅？",hint:"人数会轻微影响匹配，主要用于考虑聚餐场景。",opts:["一个人，自己享受","两个人，约会或和朋友吃","3～4 人，朋友聚餐","5 人及以上，热闹聚餐"],weight:5,
+scores:[[3,3,4,5,3],[4,4,5,4,5],[4,4,5,5,5],[4,4,4,5,4]]},
+{title:"今天最想从这顿火锅获得什么？",hint:"最后一题，选你最在意的体验。",opts:["吃到平时少见的特色菜","花最少的钱吃得满足","吃到高品质的肉","享受舒服的环境和服务","尝试一家没吃过的店","不用纠结，今天就想吃顿喜欢的火锅"],weight:6,
+scores:[[5,5,3,3,4],[3,3,4,5,4],[4,3,4,4,5],[5,5,4,5,4],[4,4,4,3,4],[3,3,3,3,3]]}
+];
+let index=0,answers=Array(questions.length).fill(null);
+const qEl=document.getElementById("question"),next=document.getElementById("next"),back=document.getElementById("back");
+function render(){const q=questions[index];document.getElementById("stepLabel").textContent=`问题 ${index+1} / ${questions.length}`;document.getElementById("pct").textContent=`${Math.round((index+1)/questions.length*100)}%`;document.getElementById("bar").style.width=`${(index+1)/questions.length*100}%`;qEl.innerHTML=`<h2>${q.title}</h2><p class="hint">${q.hint}</p><div class="options">${q.opts.map((o,i)=>`<div class="option ${answers[index]===i?"selected":""}" role="button" tabindex="0" data-i="${i}"><span class="dot"></span><span class="opttext">${o}</span></div>`).join("")}</div>`;qEl.querySelectorAll(".option").forEach(el=>{const choose=()=>{answers[index]=Number(el.dataset.i);render()};el.addEventListener("click",choose);el.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();choose()}})});back.disabled=index===0;back.style.opacity=index===0?".35":"1";next.disabled=answers[index]===null;next.textContent=index===questions.length-1?"查看我的结果 →":"下一题 →"}
+back.addEventListener("click",()=>{if(index>0){index--;render()}});
+next.addEventListener("click",()=>{if(answers[index]===null)return;if(index<questions.length-1){index++;render()}else showResults()});
+function showResults(){const totals=shops.map((name,s)=>({name,score:questions.reduce((sum,q,i)=>sum+q.weight*q.scores[answers[i]][s]/5,0)})).sort((a,b)=>b.score-a.score);const winner=totals[0];const chosen=questions.map((q,i)=>({q,answer:q.opts[answers[i]],score:q.scores[answers[i]][shops.indexOf(winner.name)]})).sort((a,b)=>b.score-a.score);const result=document.getElementById("results");result.innerHTML=`<div class="result-head"><div class="eyebrow">YOUR HOT POT MATCH</div><h2>你的火锅答案揭晓</h2><p class="hint">根据你的选择，以下是五家店的匹配结果。</p></div><div class="winner"><div class="eyebrow">本次匹配度最高</div><div class="name">${winner.name}</div><div class="score">${Math.round(winner.score)}<small> / 100 分</small></div><p class="explain">它在你选择的偏好中获得了最高的加权匹配分。分数反映问卷设定，不代表客观口味排名。</p></div><h3>五家店的匹配度</h3><div class="ranking">${totals.map((x,i)=>`<div class="rank"><div class="ranknum">${String(i+1).padStart(2,"0")}</div><div><div class="rankname">${x.name}</div><div class="track"><div class="fill" style="width:${x.score}%"></div></div></div><div class="rankscore">${Math.round(x.score)}%</div></div>`).join("")}</div><div class="explain"><b>你的偏好：</b>${questions.map((q,i)=>`${q.title.replace(/[？?]/g,"")}：${q.opts[answers[i]]}`).join("；")}。<br><br><b>评分说明：</b>每道题按权重计入总分，单项匹配分为 0～5 分。价格与学生优惠合并在预算题中考虑；88 元优惠须以门店实际适用规则为准。</div><div class="actions"><button class="btn secondary" id="edit">修改答案</button><button class="btn primary" id="again">重新测试</button></div>`;document.getElementById("quiz").style.display="none";result.style.display="block";document.getElementById("edit").onclick=()=>{index=0;result.style.display="none";document.getElementById("quiz").style.display="block";render()};document.getElementById("again").onclick=()=>{index=0;answers=Array(questions.length).fill(null);result.style.display="none";document.getElementById("quiz").style.display="block";render()};}
+render();
+</script>
+</body>
+</html>
