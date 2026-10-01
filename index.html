@@ -31,6 +31,41 @@ h2{font-size:24px;line-height:1.35;margin:0 0 8px}.hint{color:var(--muted);font-
 <div class="footer">一份轻松的火锅选择小工具 · 离线可用</div>
 </div>
 <script>
+// Supabase 配置：创建项目后，把下面两项替换成自己的 Project URL 和 anon public key。
+// anon key 可以放在网页中；数据安全由数据库 RLS 策略控制，绝不要放 service_role key。
+const SUPABASE_URL = "YOUR_SUPABASE_PROJECT_URL";
+const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_PUBLIC_KEY";
+
+async function saveSubmission(winner, totals){
+  const status = document.getElementById("saveStatus");
+  if (!SUPABASE_URL.startsWith("https://") || SUPABASE_ANON_KEY.startsWith("YOUR_")) {
+    status.textContent = "问卷结果已生成，但尚未连接数据库；配置 Supabase 后才能保存。";
+    return;
+  }
+  const payload = {
+    answers: questions.map((q, i) => ({question: q.title, answer: q.opts[answers[i]]})),
+    recommendation: winner.name,
+    scores: Object.fromEntries(totals.map(x => [x.name, Math.round(x.score)]))
+  };
+  try {
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/quiz_submissions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+        "Prefer": "return=minimal"
+      },
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    status.textContent = "答案已成功保存，感谢填写！";
+  } catch (error) {
+    status.textContent = "结果已生成，但保存失败。请稍后重试或联系问卷发布者。";
+    console.error("保存问卷失败：", error);
+  }
+}
+
 const shops=["山缓缓","芸山季","凑凑","海底捞","左庭右院"];
 const questions=[
 {title:"这顿火锅，你希望人均花多少钱？",hint:"预算会按价格区间匹配；海底捞按符合条件时的 88 元学生优惠估算。",opts:["50 元以内，能省则省","50～88 元，学生党预算","88～120 元，适当放宽","120～150 元，吃得开心最重要","150 元以上，预算不是问题"],weight:25,
@@ -55,7 +90,7 @@ const qEl=document.getElementById("question"),next=document.getElementById("next
 function render(){const q=questions[index];document.getElementById("stepLabel").textContent=`问题 ${index+1} / ${questions.length}`;document.getElementById("pct").textContent=`${Math.round((index+1)/questions.length*100)}%`;document.getElementById("bar").style.width=`${(index+1)/questions.length*100}%`;qEl.innerHTML=`<h2>${q.title}</h2><p class="hint">${q.hint}</p><div class="options">${q.opts.map((o,i)=>`<div class="option ${answers[index]===i?"selected":""}" role="button" tabindex="0" data-i="${i}"><span class="dot"></span><span class="opttext">${o}</span></div>`).join("")}</div>`;qEl.querySelectorAll(".option").forEach(el=>{const choose=()=>{answers[index]=Number(el.dataset.i);render()};el.addEventListener("click",choose);el.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();choose()}})});back.disabled=index===0;back.style.opacity=index===0?".35":"1";next.disabled=answers[index]===null;next.textContent=index===questions.length-1?"查看我的结果 →":"下一题 →"}
 back.addEventListener("click",()=>{if(index>0){index--;render()}});
 next.addEventListener("click",()=>{if(answers[index]===null)return;if(index<questions.length-1){index++;render()}else showResults()});
-function showResults(){const totals=shops.map((name,s)=>({name,score:questions.reduce((sum,q,i)=>sum+q.weight*q.scores[answers[i]][s]/5,0)})).sort((a,b)=>b.score-a.score);const winner=totals[0];const chosen=questions.map((q,i)=>({q,answer:q.opts[answers[i]],score:q.scores[answers[i]][shops.indexOf(winner.name)]})).sort((a,b)=>b.score-a.score);const result=document.getElementById("results");result.innerHTML=`<div class="result-head"><div class="eyebrow">YOUR HOT POT MATCH</div><h2>你的火锅答案揭晓</h2><p class="hint">根据你的选择，以下是五家店的匹配结果。</p></div><div class="winner"><div class="eyebrow">本次匹配度最高</div><div class="name">${winner.name}</div><div class="score">${Math.round(winner.score)}<small> / 100 分</small></div><p class="explain">它在你选择的偏好中获得了最高的加权匹配分。分数反映问卷设定，不代表客观口味排名。</p></div><h3>五家店的匹配度</h3><div class="ranking">${totals.map((x,i)=>`<div class="rank"><div class="ranknum">${String(i+1).padStart(2,"0")}</div><div><div class="rankname">${x.name}</div><div class="track"><div class="fill" style="width:${x.score}%"></div></div></div><div class="rankscore">${Math.round(x.score)}%</div></div>`).join("")}</div><div class="explain"><b>你的偏好：</b>${questions.map((q,i)=>`${q.title.replace(/[？?]/g,"")}：${q.opts[answers[i]]}`).join("；")}。<br><br><b>评分说明：</b>每道题按权重计入总分，单项匹配分为 0～5 分。价格与学生优惠合并在预算题中考虑；88 元优惠须以门店实际适用规则为准。</div><div class="actions"><button class="btn secondary" id="edit">修改答案</button><button class="btn primary" id="again">重新测试</button></div>`;document.getElementById("quiz").style.display="none";result.style.display="block";document.getElementById("edit").onclick=()=>{index=0;result.style.display="none";document.getElementById("quiz").style.display="block";render()};document.getElementById("again").onclick=()=>{index=0;answers=Array(questions.length).fill(null);result.style.display="none";document.getElementById("quiz").style.display="block";render()};}
+function showResults(){const totals=shops.map((name,s)=>({name,score:questions.reduce((sum,q,i)=>sum+q.weight*q.scores[answers[i]][s]/5,0)})).sort((a,b)=>b.score-a.score);const winner=totals[0];const chosen=questions.map((q,i)=>({q,answer:q.opts[answers[i]],score:q.scores[answers[i]][shops.indexOf(winner.name)]})).sort((a,b)=>b.score-a.score);const result=document.getElementById("results");result.innerHTML=`<div class="result-head"><div class="eyebrow">YOUR HOT POT MATCH</div><h2>你的火锅答案揭晓</h2><p class="hint">根据你的选择，以下是五家店的匹配结果。</p></div><div class="winner"><div class="eyebrow">本次匹配度最高</div><div class="name">${winner.name}</div><div class="score">${Math.round(winner.score)}<small> / 100 分</small></div><p class="explain">它在你选择的偏好中获得了最高的加权匹配分。分数反映问卷设定，不代表客观口味排名。</p></div><h3>五家店的匹配度</h3><div class="ranking">${totals.map((x,i)=>`<div class="rank"><div class="ranknum">${String(i+1).padStart(2,"0")}</div><div><div class="rankname">${x.name}</div><div class="track"><div class="fill" style="width:${x.score}%"></div></div></div><div class="rankscore">${Math.round(x.score)}%</div></div>`).join("")}</div><div class="explain"><b>你的偏好：</b>${questions.map((q,i)=>`${q.title.replace(/[？?]/g,"")}：${q.opts[answers[i]]}`).join("；")}。<br><br><b>评分说明：</b>每道题按权重计入总分，单项匹配分为 0～5 分。价格与学生优惠合并在预算题中考虑；88 元优惠须以门店实际适用规则为准。</div><p class="tiny" id="saveStatus" role="status">正在保存本次问卷答案……</p><div class="actions"><button class="btn secondary" id="edit">修改答案</button><button class="btn primary" id="again">重新测试</button></div>`;document.getElementById("quiz").style.display="none";result.style.display="block";saveSubmission(winner,totals);document.getElementById("edit").onclick=()=>{index=0;result.style.display="none";document.getElementById("quiz").style.display="block";render()};document.getElementById("again").onclick=()=>{index=0;answers=Array(questions.length).fill(null);result.style.display="none";document.getElementById("quiz").style.display="block";render()};}
 render();
 </script>
 </body>
