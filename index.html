@@ -54,7 +54,11 @@ async function saveSubmission(winner, totals){
       },
       body: JSON.stringify(payload)
     });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    if (!response.ok) {
+      const detail = await response.text();
+      console.error("Supabase 返回详情：", detail);
+      throw new Error(`HTTP ${response.status}: ${detail}`);
+    }
     status.textContent = "问卷已收到！希望你能吃上你想吃的火锅！";
   } catch (error) {
     status.textContent = "结果已生成，但保存失败。请稍后重试或联系问卷发布者。";
